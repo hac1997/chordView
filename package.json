@@ -1,0 +1,17 @@
+{
+  "name": "chord-finder",
+  "version": "1.0.0",
+  "description": "Identificador de acordes com análise espectral",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd .. && python3 main.py",
+    "dev:frontend": "cd web && npm run dev",
+    "build": "cd web && npm run build",
+    "install:all": "cd web && npm install",
+    "start:backend": "cd .. && python3 main.py"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
