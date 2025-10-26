@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import './AudioPlayer.css';
 
-const AudioPlayer = ({ audioFile, filters }) => {
+const AudioPlayer = ({ audioFile, filters, onTimelineUpdate }) => {
   const audioRef = useRef(null);
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
@@ -9,6 +9,7 @@ const AudioPlayer = ({ audioFile, filters }) => {
   const audioContextRef = useRef(null);
   const sourceRef = useRef(null);
   const filtersRef = useRef({});
+  const lastCaptureTime = useRef(0);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -222,6 +223,22 @@ const AudioPlayer = ({ audioFile, filters }) => {
       const sortedBars = [...bars].sort((a, b) => b.value - a.value);
       const top3Indices = new Set([sortedBars[0]?.index, sortedBars[1]?.index, sortedBars[2]?.index]);
 
+      const currentAudioTime = audioRef.current?.currentTime || 0;
+      if (currentAudioTime - lastCaptureTime.current >= 0.5 && onTimelineUpdate) {
+        const top3Frequencies = sortedBars.slice(0, 3).map(bar => {
+          const freqRatio = bar.index / barCount;
+          return minFreq * Math.pow(maxFreq / minFreq, freqRatio);
+        }).filter(freq => freq > 0);
+
+        if (top3Frequencies.length > 0) {
+          onTimelineUpdate({
+            time: currentAudioTime,
+            frequencies: top3Frequencies,
+          });
+          lastCaptureTime.current = currentAudioTime;
+        }
+      }
+
       bars.forEach(({ index, barHeight }) => {
         const x = index * barWidth;
         const y = height - barHeight - 40;
@@ -301,11 +318,19 @@ const AudioPlayer = ({ audioFile, filters }) => {
   };
 
   const handleTimeUpdate = () => {
-    setCurrentTime(audioRef.current.currentTime);
+    const time = audioRef.current.currentTime;
+    setCurrentTime(time);
+    if (onTimeUpdate) {
+      onTimeUpdate(time);
+    }
   };
 
   const handleLoadedMetadata = () => {
-    setDuration(audioRef.current.duration);
+    const dur = audioRef.current.duration;
+    setDuration(dur);
+    if (onDurationUpdate) {
+      onDurationUpdate(dur);
+    }
   };
 
   const handleSeek = (e) => {
