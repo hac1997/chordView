@@ -14,6 +14,7 @@ const AudioPlayer = ({ audioFile, filters }) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.7);
+  const [playbackRate, setPlaybackRate] = useState(1.0);
 
   const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -50,6 +51,13 @@ const AudioPlayer = ({ audioFile, filters }) => {
       audio.volume = volume;
     }
   }, [volume]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.playbackRate = playbackRate;
+    }
+  }, [playbackRate]);
 
   useEffect(() => {
     if (filters && audioContextRef.current) {
@@ -167,24 +175,44 @@ const AudioPlayer = ({ audioFile, filters }) => {
         });
       }
 
+      const bars = [];
       for (let i = 0; i < barCount; i++) {
         const freqRatio = i / barCount;
         const frequency = minFreq * Math.pow(maxFreq / minFreq, freqRatio);
 
         const binIndex = Math.floor((frequency / sampleRate) * analyser.fftSize);
-        const barHeight = (dataArray[binIndex] / 255) * (height - 40) * 0.9;
+        const value = dataArray[binIndex];
+        const barHeight = (value / 255) * (height - 40) * 0.9;
 
-        const x = i * barWidth;
+        bars.push({ index: i, value, barHeight });
+      }
+
+      const sortedBars = [...bars].sort((a, b) => b.value - a.value);
+      const top3Indices = new Set([sortedBars[0]?.index, sortedBars[1]?.index, sortedBars[2]?.index]);
+
+      bars.forEach(({ index, barHeight }) => {
+        const x = index * barWidth;
         const y = height - barHeight - 40;
 
-        ctx.fillStyle = gradient;
+        const isTop3 = top3Indices.has(index);
+
+        if (isTop3) {
+          const redGradient = ctx.createLinearGradient(0, height, 0, 0);
+          redGradient.addColorStop(0, '#dc2626');
+          redGradient.addColorStop(0.5, '#ef4444');
+          redGradient.addColorStop(1, '#f87171');
+          ctx.fillStyle = redGradient;
+        } else {
+          ctx.fillStyle = gradient;
+        }
+
         ctx.fillRect(x, y, barWidth - 1, barHeight);
 
         ctx.shadowBlur = 15;
-        ctx.shadowColor = '#3b82f6';
+        ctx.shadowColor = isTop3 ? '#dc2626' : '#3b82f6';
         ctx.fillRect(x, y, barWidth - 1, barHeight);
         ctx.shadowBlur = 0;
-      }
+      });
 
       ctx.strokeStyle = '#475569';
       ctx.lineWidth = 1;
@@ -314,6 +342,22 @@ const AudioPlayer = ({ audioFile, filters }) => {
 
         <div className="time-display">
           {formatTime(duration)}
+        </div>
+
+        <div className="speed-control">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+          </svg>
+          <input
+            type="range"
+            min="0.25"
+            max="2"
+            step="0.05"
+            value={playbackRate}
+            onChange={(e) => setPlaybackRate(parseFloat(e.target.value))}
+            className="speed-slider"
+          />
+          <span className="speed-value">{playbackRate.toFixed(2)}x</span>
         </div>
 
         <div className="volume-control">
