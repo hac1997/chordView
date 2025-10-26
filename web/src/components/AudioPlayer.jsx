@@ -1,18 +1,29 @@
 import React, { useRef, useState, useEffect } from 'react';
 import './AudioPlayer.css';
 
-const AudioPlayer = ({ audioFile }) => {
+const AudioPlayer = ({ audioFile, filters }) => {
   const audioRef = useRef(null);
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
   const analyserRef = useRef(null);
   const audioContextRef = useRef(null);
   const sourceRef = useRef(null);
+  const filtersRef = useRef({});
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.7);
+
+  const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+  const frequencyToNote = (frequency) => {
+    const noteNum = 12 * (Math.log(frequency / 440) / Math.log(2));
+    const roundedNote = Math.round(noteNum) + 69;
+    const octave = Math.floor(roundedNote / 12) - 1;
+    const note = noteNames[roundedNote % 12];
+    return `${note}${octave}`;
+  };
 
   useEffect(() => {
     if (audioFile) {
@@ -40,11 +51,67 @@ const AudioPlayer = ({ audioFile }) => {
     }
   }, [volume]);
 
+  useEffect(() => {
+    if (filters && audioContextRef.current) {
+      const context = audioContextRef.current;
+
+      const bassFilter = filtersRef.current.bass || context.createBiquadFilter();
+      bassFilter.type = 'lowshelf';
+      bassFilter.frequency.value = 60;
+      bassFilter.gain.value = filters.bass || 0;
+
+      const lowMidFilter = filtersRef.current.lowMid || context.createBiquadFilter();
+      lowMidFilter.type = 'peaking';
+      lowMidFilter.frequency.value = 250;
+      lowMidFilter.Q.value = 1;
+      lowMidFilter.gain.value = filters.lowMid || 0;
+
+      const midFilter = filtersRef.current.mid || context.createBiquadFilter();
+      midFilter.type = 'peaking';
+      midFilter.frequency.value = 1000;
+      midFilter.Q.value = 1;
+      midFilter.gain.value = filters.mid || 0;
+
+      const highMidFilter = filtersRef.current.highMid || context.createBiquadFilter();
+      highMidFilter.type = 'peaking';
+      highMidFilter.frequency.value = 4000;
+      highMidFilter.Q.value = 1;
+      highMidFilter.gain.value = filters.highMid || 0;
+
+      const trebleFilter = filtersRef.current.treble || context.createBiquadFilter();
+      trebleFilter.type = 'highshelf';
+      trebleFilter.frequency.value = 8000;
+      trebleFilter.gain.value = filters.treble || 0;
+
+      if (!filtersRef.current.bass) {
+        const source = sourceRef.current;
+        const analyser = analyserRef.current;
+
+        source.disconnect();
+        source.connect(bassFilter);
+        bassFilter.connect(lowMidFilter);
+        lowMidFilter.connect(midFilter);
+        midFilter.connect(highMidFilter);
+        highMidFilter.connect(trebleFilter);
+        trebleFilter.connect(analyser);
+        analyser.connect(context.destination);
+
+        filtersRef.current = {
+          bass: bassFilter,
+          lowMid: lowMidFilter,
+          mid: midFilter,
+          highMid: highMidFilter,
+          treble: trebleFilter,
+        };
+      }
+    }
+  }, [filters]);
+
   const initializeAudioContext = () => {
     if (!audioContextRef.current) {
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 2048;
+      analyser.fftSize = 4096;
       analyser.smoothingTimeConstant = 0.85;
 
       const source = audioContext.createMediaElementSource(audioRef.current);
@@ -69,12 +136,13 @@ const AudioPlayer = ({ audioFile }) => {
 
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
+    const sampleRate = audioContextRef.current.sampleRate;
 
     const draw = () => {
       animationRef.current = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
 
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.2)';
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
       ctx.fillRect(0, 0, width, height);
 
       const gradient = ctx.createLinearGradient(0, height, 0, 0);
@@ -82,23 +150,74 @@ const AudioPlayer = ({ audioFile }) => {
       gradient.addColorStop(0.5, '#0ea5e9');
       gradient.addColorStop(1, '#06b6d4');
 
-      const barCount = 100;
+      const minFreq = 20;
+      const maxFreq = 8000;
+      const barCount = 120;
       const barWidth = width / barCount;
-      const step = Math.floor(bufferLength / barCount);
+
+      const notesToShow = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+      const labeledNotes = [];
+
+      for (let octave = 1; octave <= 7; octave++) {
+        notesToShow.forEach(note => {
+          const freq = 440 * Math.pow(2, (noteNames.indexOf(note) - 9 + (octave - 4) * 12) / 12);
+          if (freq >= minFreq && freq <= maxFreq) {
+            labeledNotes.push({ note: `${note}${octave}`, freq });
+          }
+        });
+      }
 
       for (let i = 0; i < barCount; i++) {
-        const barHeight = (dataArray[i * step] / 255) * height * 0.9;
+        const freqRatio = i / barCount;
+        const frequency = minFreq * Math.pow(maxFreq / minFreq, freqRatio);
+
+        const binIndex = Math.floor((frequency / sampleRate) * analyser.fftSize);
+        const barHeight = (dataArray[binIndex] / 255) * (height - 40) * 0.9;
+
         const x = i * barWidth;
-        const y = height - barHeight;
+        const y = height - barHeight - 40;
 
         ctx.fillStyle = gradient;
-        ctx.fillRect(x, y, barWidth - 2, barHeight);
+        ctx.fillRect(x, y, barWidth - 1, barHeight);
 
-        ctx.shadowBlur = 20;
+        ctx.shadowBlur = 15;
         ctx.shadowColor = '#3b82f6';
-        ctx.fillRect(x, y, barWidth - 2, barHeight);
+        ctx.fillRect(x, y, barWidth - 1, barHeight);
         ctx.shadowBlur = 0;
       }
+
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, height - 40);
+      ctx.lineTo(width, height - 40);
+      ctx.stroke();
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px monospace';
+      ctx.textAlign = 'center';
+
+      labeledNotes.forEach(({ note, freq }) => {
+        const freqRatio = Math.log(freq / minFreq) / Math.log(maxFreq / minFreq);
+        const x = freqRatio * width;
+
+        if (x >= 0 && x <= width) {
+          ctx.strokeStyle = '#475569';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x, height - 40);
+          ctx.lineTo(x, height - 35);
+          ctx.stroke();
+
+          ctx.fillStyle = '#cbd5e1';
+          ctx.fillText(note, x, height - 20);
+
+          ctx.fillStyle = '#64748b';
+          ctx.font = '9px monospace';
+          ctx.fillText(`${Math.round(freq)}Hz`, x, height - 8);
+          ctx.font = '11px monospace';
+        }
+      });
     };
 
     draw();
