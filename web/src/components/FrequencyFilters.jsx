@@ -3,63 +3,95 @@ import './FrequencyFilters.css';
 
 const FrequencyFilters = ({ onFilterChange }) => {
   const [activeFilters, setActiveFilters] = useState({
+    subBass: 0,
     bass: 0,
     lowMid: 0,
     mid: 0,
     highMid: 0,
-    treble: 0,
+    presence: 0,
+    brilliance: 0,
   });
 
   const [instrumentPreset, setInstrumentPreset] = useState('none');
+  const [vocalRemoval, setVocalRemoval] = useState(false);
 
   const instrumentPresets = {
     none: {
       label: 'Sem Filtro',
+      subBass: 0,
       bass: 0,
       lowMid: 0,
       mid: 0,
       highMid: 0,
-      treble: 0,
+      presence: 0,
+      brilliance: 0,
+      vocalRemoval: false,
     },
     vocals: {
       label: 'Vocais',
-      bass: -8,
-      lowMid: -4,
-      mid: 6,
-      highMid: 4,
-      treble: 2,
+      subBass: -18,
+      bass: -12,
+      lowMid: -6,
+      mid: 8,
+      highMid: 10,
+      presence: 8,
+      brilliance: 4,
+      vocalRemoval: false,
+    },
+    remove_vocals: {
+      label: 'Remover Vocais',
+      subBass: 4,
+      bass: 6,
+      lowMid: -8,
+      mid: -20,
+      highMid: -18,
+      presence: -15,
+      brilliance: 0,
+      vocalRemoval: true,
     },
     guitar: {
       label: 'Guitarra',
-      bass: -6,
-      lowMid: 4,
-      mid: 6,
-      highMid: 4,
-      treble: -2,
+      subBass: -15,
+      bass: -8,
+      lowMid: 6,
+      mid: 10,
+      highMid: 8,
+      presence: 4,
+      brilliance: -4,
+      vocalRemoval: false,
     },
     bass_guitar: {
       label: 'Baixo',
-      bass: 8,
+      subBass: 12,
+      bass: 10,
       lowMid: 6,
-      mid: -4,
-      highMid: -6,
-      treble: -8,
+      mid: -10,
+      highMid: -15,
+      presence: -18,
+      brilliance: -20,
+      vocalRemoval: false,
     },
     drums: {
       label: 'Bateria',
-      bass: 6,
-      lowMid: -2,
-      mid: -4,
-      highMid: 4,
-      treble: 6,
+      subBass: 8,
+      bass: 10,
+      lowMid: -6,
+      mid: -12,
+      highMid: 6,
+      presence: 10,
+      brilliance: 12,
+      vocalRemoval: false,
     },
     piano: {
       label: 'Piano',
-      bass: 2,
-      lowMid: 4,
-      mid: 4,
-      highMid: 4,
-      treble: 4,
+      subBass: -6,
+      bass: 0,
+      lowMid: 6,
+      mid: 8,
+      highMid: 8,
+      presence: 6,
+      brilliance: 10,
+      vocalRemoval: false,
     },
   };
 
@@ -67,13 +99,17 @@ const FrequencyFilters = ({ onFilterChange }) => {
     setInstrumentPreset(preset);
     const presetValues = instrumentPresets[preset];
     const newFilters = {
+      subBass: presetValues.subBass,
       bass: presetValues.bass,
       lowMid: presetValues.lowMid,
       mid: presetValues.mid,
       highMid: presetValues.highMid,
-      treble: presetValues.treble,
+      presence: presetValues.presence,
+      brilliance: presetValues.brilliance,
+      vocalRemoval: presetValues.vocalRemoval,
     };
     setActiveFilters(newFilters);
+    setVocalRemoval(presetValues.vocalRemoval);
     onFilterChange(newFilters);
   };
 
@@ -111,19 +147,36 @@ const FrequencyFilters = ({ onFilterChange }) => {
 
       <div className="equalizer">
         <div className="eq-band">
+          <label>Sub-Grave</label>
+          <div className="slider-container">
+            <span className="slider-value">{activeFilters.subBass > 0 ? '+' : ''}{activeFilters.subBass}dB</span>
+            <input
+              type="range"
+              min="-20"
+              max="20"
+              step="1"
+              value={activeFilters.subBass}
+              onChange={(e) => handleSliderChange('subBass', parseInt(e.target.value))}
+              className="eq-slider"
+            />
+            <span className="frequency-label">40Hz</span>
+          </div>
+        </div>
+
+        <div className="eq-band">
           <label>Grave</label>
           <div className="slider-container">
             <span className="slider-value">{activeFilters.bass > 0 ? '+' : ''}{activeFilters.bass}dB</span>
             <input
               type="range"
-              min="-12"
-              max="12"
+              min="-20"
+              max="20"
               step="1"
               value={activeFilters.bass}
               onChange={(e) => handleSliderChange('bass', parseInt(e.target.value))}
               className="eq-slider"
             />
-            <span className="frequency-label">60Hz</span>
+            <span className="frequency-label">100Hz</span>
           </div>
         </div>
 
@@ -133,14 +186,14 @@ const FrequencyFilters = ({ onFilterChange }) => {
             <span className="slider-value">{activeFilters.lowMid > 0 ? '+' : ''}{activeFilters.lowMid}dB</span>
             <input
               type="range"
-              min="-12"
-              max="12"
+              min="-20"
+              max="20"
               step="1"
               value={activeFilters.lowMid}
               onChange={(e) => handleSliderChange('lowMid', parseInt(e.target.value))}
               className="eq-slider"
             />
-            <span className="frequency-label">250Hz</span>
+            <span className="frequency-label">400Hz</span>
           </div>
         </div>
 
@@ -150,8 +203,8 @@ const FrequencyFilters = ({ onFilterChange }) => {
             <span className="slider-value">{activeFilters.mid > 0 ? '+' : ''}{activeFilters.mid}dB</span>
             <input
               type="range"
-              min="-12"
-              max="12"
+              min="-20"
+              max="20"
               step="1"
               value={activeFilters.mid}
               onChange={(e) => handleSliderChange('mid', parseInt(e.target.value))}
@@ -167,31 +220,48 @@ const FrequencyFilters = ({ onFilterChange }) => {
             <span className="slider-value">{activeFilters.highMid > 0 ? '+' : ''}{activeFilters.highMid}dB</span>
             <input
               type="range"
-              min="-12"
-              max="12"
+              min="-20"
+              max="20"
               step="1"
               value={activeFilters.highMid}
               onChange={(e) => handleSliderChange('highMid', parseInt(e.target.value))}
               className="eq-slider"
             />
-            <span className="frequency-label">4kHz</span>
+            <span className="frequency-label">2.5kHz</span>
           </div>
         </div>
 
         <div className="eq-band">
-          <label>Agudo</label>
+          <label>Presença</label>
           <div className="slider-container">
-            <span className="slider-value">{activeFilters.treble > 0 ? '+' : ''}{activeFilters.treble}dB</span>
+            <span className="slider-value">{activeFilters.presence > 0 ? '+' : ''}{activeFilters.presence}dB</span>
             <input
               type="range"
-              min="-12"
-              max="12"
+              min="-20"
+              max="20"
               step="1"
-              value={activeFilters.treble}
-              onChange={(e) => handleSliderChange('treble', parseInt(e.target.value))}
+              value={activeFilters.presence}
+              onChange={(e) => handleSliderChange('presence', parseInt(e.target.value))}
               className="eq-slider"
             />
-            <span className="frequency-label">8kHz</span>
+            <span className="frequency-label">5kHz</span>
+          </div>
+        </div>
+
+        <div className="eq-band">
+          <label>Brilho</label>
+          <div className="slider-container">
+            <span className="slider-value">{activeFilters.brilliance > 0 ? '+' : ''}{activeFilters.brilliance}dB</span>
+            <input
+              type="range"
+              min="-20"
+              max="20"
+              step="1"
+              value={activeFilters.brilliance}
+              onChange={(e) => handleSliderChange('brilliance', parseInt(e.target.value))}
+              className="eq-slider"
+            />
+            <span className="frequency-label">10kHz</span>
           </div>
         </div>
       </div>

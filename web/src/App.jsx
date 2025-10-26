@@ -7,11 +7,14 @@ import './App.css';
 function App() {
   const [audioFile, setAudioFile] = useState(null);
   const [filters, setFilters] = useState({
+    subBass: 0,
     bass: 0,
     lowMid: 0,
     mid: 0,
     highMid: 0,
-    treble: 0,
+    presence: 0,
+    brilliance: 0,
+    vocalRemoval: false,
   });
 
   const handleFileSelect = (file) => {

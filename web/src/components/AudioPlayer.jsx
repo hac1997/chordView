@@ -63,53 +63,85 @@ const AudioPlayer = ({ audioFile, filters }) => {
     if (filters && audioContextRef.current) {
       const context = audioContextRef.current;
 
+      const subBassFilter = filtersRef.current.subBass || context.createBiquadFilter();
+      subBassFilter.type = 'lowshelf';
+      subBassFilter.frequency.value = 40;
+      subBassFilter.gain.value = filters.subBass || 0;
+
       const bassFilter = filtersRef.current.bass || context.createBiquadFilter();
-      bassFilter.type = 'lowshelf';
-      bassFilter.frequency.value = 60;
+      bassFilter.type = 'peaking';
+      bassFilter.frequency.value = 100;
+      bassFilter.Q.value = 0.8;
       bassFilter.gain.value = filters.bass || 0;
 
       const lowMidFilter = filtersRef.current.lowMid || context.createBiquadFilter();
       lowMidFilter.type = 'peaking';
-      lowMidFilter.frequency.value = 250;
-      lowMidFilter.Q.value = 1;
+      lowMidFilter.frequency.value = 400;
+      lowMidFilter.Q.value = 1.2;
       lowMidFilter.gain.value = filters.lowMid || 0;
 
       const midFilter = filtersRef.current.mid || context.createBiquadFilter();
       midFilter.type = 'peaking';
       midFilter.frequency.value = 1000;
-      midFilter.Q.value = 1;
+      midFilter.Q.value = 2.0;
       midFilter.gain.value = filters.mid || 0;
 
       const highMidFilter = filtersRef.current.highMid || context.createBiquadFilter();
       highMidFilter.type = 'peaking';
-      highMidFilter.frequency.value = 4000;
-      highMidFilter.Q.value = 1;
+      highMidFilter.frequency.value = 2500;
+      highMidFilter.Q.value = 2.5;
       highMidFilter.gain.value = filters.highMid || 0;
 
-      const trebleFilter = filtersRef.current.treble || context.createBiquadFilter();
-      trebleFilter.type = 'highshelf';
-      trebleFilter.frequency.value = 8000;
-      trebleFilter.gain.value = filters.treble || 0;
+      const presenceFilter = filtersRef.current.presence || context.createBiquadFilter();
+      presenceFilter.type = 'peaking';
+      presenceFilter.frequency.value = 5000;
+      presenceFilter.Q.value = 2.0;
+      presenceFilter.gain.value = filters.presence || 0;
 
-      if (!filtersRef.current.bass) {
+      const brillianceFilter = filtersRef.current.brilliance || context.createBiquadFilter();
+      brillianceFilter.type = 'highshelf';
+      brillianceFilter.frequency.value = 10000;
+      brillianceFilter.gain.value = filters.brilliance || 0;
+
+      if (!filtersRef.current.subBass) {
         const source = sourceRef.current;
         const analyser = analyserRef.current;
 
         source.disconnect();
-        source.connect(bassFilter);
-        bassFilter.connect(lowMidFilter);
-        lowMidFilter.connect(midFilter);
-        midFilter.connect(highMidFilter);
-        highMidFilter.connect(trebleFilter);
-        trebleFilter.connect(analyser);
+
+        let currentNode = source;
+        currentNode.connect(subBassFilter);
+        currentNode = subBassFilter;
+
+        currentNode.connect(bassFilter);
+        currentNode = bassFilter;
+
+        currentNode.connect(lowMidFilter);
+        currentNode = lowMidFilter;
+
+        currentNode.connect(midFilter);
+        currentNode = midFilter;
+
+        currentNode.connect(highMidFilter);
+        currentNode = highMidFilter;
+
+        currentNode.connect(presenceFilter);
+        currentNode = presenceFilter;
+
+        currentNode.connect(brillianceFilter);
+        currentNode = brillianceFilter;
+
+        currentNode.connect(analyser);
         analyser.connect(context.destination);
 
         filtersRef.current = {
+          subBass: subBassFilter,
           bass: bassFilter,
           lowMid: lowMidFilter,
           mid: midFilter,
           highMid: highMidFilter,
-          treble: trebleFilter,
+          presence: presenceFilter,
+          brilliance: brillianceFilter,
         };
       }
     }
