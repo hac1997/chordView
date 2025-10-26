@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import AudioUploader from './components/AudioUploader';
-import ChordDisplay from './components/ChordDisplay';
+import AudioPlayer from './components/AudioPlayer';
 import './App.css';
 
 function App() {
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [audioFile, setAudioFile] = useState(null);
 
-  const handleAnalysisComplete = (analysisResult) => {
-    setResult(analysisResult);
+  const handleFileSelect = (file) => {
+    setAudioFile(file);
   };
 
   return (
@@ -17,25 +16,21 @@ function App() {
 
       <div className="app-content">
         <header className="app-header">
-          <div className="logo">🎸</div>
-          <h1 className="app-title">Chord Finder</h1>
+          <div className="logo">🎵</div>
+          <h1 className="app-title">Spectrum Visualizer</h1>
           <p className="app-description">
-            Identifique os acordes de qualquer música com inteligência artificial
+            Visualize o espectro de frequência de qualquer música em tempo real
           </p>
         </header>
 
         <main className="app-main">
-          <AudioUploader
-            onAnalysisComplete={handleAnalysisComplete}
-            loading={loading}
-            setLoading={setLoading}
-          />
+          <AudioUploader onFileSelect={handleFileSelect} />
 
-          {result && <ChordDisplay result={result} />}
+          {audioFile && <AudioPlayer audioFile={audioFile} />}
         </main>
 
         <footer className="app-footer">
-          <p>Desenvolvido com análise espectral e reconhecimento de padrões</p>
+          <p>Análise de áudio em tempo real usando Web Audio API</p>
         </footer>
       </div>
     </div>
